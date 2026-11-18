@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escape room · L'età giolittiana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3ead7; --paper2:#eadcbf; --ink:#2a2118; --muted:#6b5c48;
+  --red:#9c2f22; --green:#2f5d46; --gold:#b08a3e; --line:#cdb994;
+  --ok:#2f6d3f; --bad:#a3352a;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:"Source Serif 4",Georgia,serif; color:var(--ink); font-size:18px; line-height:1.5;
+  background:#3b2f24 radial-gradient(ellipse at top,#4a3b2d 0%,#2b221a 70%) fixed;
+  min-height:100vh; padding:16px;
+}
+.wrap{max-width:820px;margin:0 auto}
+.card{
+  background:var(--paper); border-radius:6px; padding:28px 30px;
+  box-shadow:0 10px 40px rgba(0,0,0,.45), inset 0 0 80px rgba(160,120,60,.18);
+  border:1px solid #d8c7a2; position:relative;
+}
+.card:before{content:"";position:absolute;inset:8px;border:1px solid var(--line);border-radius:3px;pointer-events:none}
+h1,h2,h3{font-family:"Playfair Display",Georgia,serif;margin:0 0 .4em;line-height:1.15}
+h1{font-size:2.3rem;font-weight:800;color:var(--red)}
+h2{font-size:1.6rem;color:var(--green)}
+.kicker{font-variant:small-caps;letter-spacing:.12em;color:var(--muted);font-size:.9rem;margin-bottom:.3em}
+.orn{text-align:center;color:var(--gold);letter-spacing:.6em;margin:10px 0 14px}
+p{margin:.5em 0}
+button{
+  font-family:inherit;font-size:1rem;cursor:pointer;border-radius:4px;
+  border:1px solid var(--ink);background:var(--ink);color:var(--paper);padding:10px 18px;
+}
+button:hover{filter:brightness(1.15)}
+button.ghost{background:transparent;color:var(--ink)}
+button:disabled{opacity:.45;cursor:default;filter:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.right{justify-content:flex-end}
+
+/* HUD */
+.hud{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  color:var(--paper);margin-bottom:12px;font-size:.95rem
+}
+.timer{font-family:"Playfair Display",serif;font-size:1.7rem;font-weight:800;letter-spacing:.04em;min-width:92px}
+.timer.warn{color:#f0b35a}.timer.crit{color:#ff7a66;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.5}}
+.doors{display:flex;gap:6px}
+.door{
+  width:30px;height:38px;border-radius:14px 14px 2px 2px;border:1px solid #a88d5f;
+  display:grid;place-items:center;font-family:"Playfair Display",serif;font-weight:800;font-size:.95rem;
+  background:#5a4734;color:#d9c49b
+}
+.door.open{background:var(--gold);color:var(--ink);border-color:#e3c98a}
+.door.here{outline:2px solid #f3ead7;outline-offset:2px}
+.score{opacity:.9}
+.penalty{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--bad);color:#fff;
+  padding:6px 14px;border-radius:20px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.penalty.show{opacity:1}
+
+/* Question */
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:.9rem;margin-bottom:6px}
+.qtext{font-size:1.15rem;font-weight:600;margin:6px 0 14px}
+.opts{display:grid;gap:8px}
+.opt{
+  text-align:left;background:var(--paper2);color:var(--ink);border:1px solid var(--line);padding:12px 14px;
+}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.wrong{background:#ecc9c0;border-color:var(--bad);text-decoration:line-through}
+.opt.right{background:#cfe2c8;border-color:var(--ok)}
+input[type=text]{
+  font-family:inherit;font-size:1.1rem;padding:10px 12px;border:1px solid var(--muted);border-radius:4px;
+  background:#fffaf0;width:100%;max-width:420px;color:var(--ink)
+}
+.cls{display:grid;gap:8px}
+.clsrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--paper2)}
+.clsrow.wrong{border-color:var(--bad);background:#efd3cb}
+.clsrow.right{border-color:var(--ok);background:#d6e6cf}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{padding:6px 10px;font-size:.9rem;background:transparent;color:var(--ink);border-color:var(--muted)}
+.seg button.sel{background:var(--green);color:#fff;border-color:var(--green)}
+.ord{display:grid;gap:6px}
+.orow{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--paper2)}
+.orow .n{font-family:"Playfair Display",serif;font-weight:800;color:var(--red);width:22px}
+.orow .t{flex:1}
+.orow button{padding:4px 10px;background:transparent;color:var(--ink);border-color:var(--muted)}
+.orow.wrong{border-color:var(--bad);background:#efd3cb}
+.orow.right{border-color:var(--ok);background:#d6e6cf}
+.fb{margin-top:16px;padding:12px 14px;border-left:4px solid var(--gold);background:#efe3c8;border-radius:0 4px 4px 0}
+.fb.ok{border-color:var(--ok)}.fb.bad{border-color:var(--bad)}
+.fb b{font-family:"Playfair Display",serif}
+.actions{margin-top:18px}
+
+/* Room intro / letter */
+.bigletter{
+  font-family:"Playfair Display",serif;font-size:4.5rem;font-weight:800;color:var(--red);
+  width:110px;height:130px;margin:10px auto;display:grid;place-items:center;
+  border:2px solid var(--gold);border-radius:50px 50px 4px 4px;background:var(--paper2)
+}
+.center{text-align:center}
+.tiles{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0}
+.tile{width:44px;height:52px;display:grid;place-items:center;font-family:"Playfair Display",serif;font-weight:800;
+  font-size:1.6rem;background:var(--paper2);border:1px solid var(--gold);border-radius:4px;color:var(--red)}
+.review{margin-top:18px}
+.review details{border-top:1px solid var(--line);padding:8px 0}
+.review summary{cursor:pointer;font-weight:600}
+.rq{margin:8px 0 12px;font-size:.95rem}
+.rq .a{color:var(--green);font-weight:600}
+.tag{display:inline-block;font-size:.8rem;padding:1px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.tag.t10{background:#cfe2c8}.tag.t5{background:#efe0b5}.tag.t0{background:#ecc9c0}
+select{font-family:inherit;font-size:1rem;padding:8px;border-radius:4px;border:1px solid var(--muted);background:#fffaf0}
+.small{font-size:.9rem;color:var(--muted)}
+@media (max-width:560px){
+  body{padding:8px;font-size:17px}.card{padding:22px 18px}h1{font-size:1.8rem}
+  .door{width:24px;height:32px;font-size:.8rem}.timer{font-size:1.4rem}
+}
+</style>
+</head>
+<body>
+<div class="penalty" id="pen">−15 secondi</div>
+<div class="wrap">
+  <div class="hud" id="hud" hidden>
+    <div class="timer" id="timer">25:00</div>
+    <div class="doors" id="doors"></div>
+    <div class="score" id="score">Punti: 0</div>
+  </div>
+  <div class="card" id="main"></div>
+</div>
+
+<script>
+/* ============ CONTENUTI (solo dal manuale, pp. 46–53) ============ */
+const ROOMS = [
+ {title:"L'anticamera del Ministero", sub:"Giolitti e l'età giolittiana (1901–1914)", letter:"D",
+  intro:"Sulla scrivania c'è una nomina regia datata 1901. Per entrare devi ricostruire chi era l'uomo che dominò la politica italiana per quattordici anni.",
+  qs:[
+   {t:"mc", q:"Nel 1901 il re Vittorio Emanuele III formò un nuovo governo. Quali ruoli ebbero Zanardelli e Giolitti?",
+    opts:["Zanardelli presidente del Consiglio, Giolitti ministro degli interni","Giolitti presidente del Consiglio, Zanardelli ministro degli interni","Zanardelli presidente del Consiglio, Giolitti ministro delle finanze","Giolitti presidente del Consiglio, Zanardelli ministro degli esteri"], a:0,
+    exp:"Nel 1901 il presidente del Consiglio era Giuseppe Zanardelli; Giolitti, ministro degli interni, era però l'uomo forte del governo e, con Zanardelli ormai anziano, prendeva le decisioni più importanti."},
+   {t:"in", q:"In che anno Zanardelli si dimise e Giolitti diventò primo ministro? (scrivi l'anno)", acc:["1903"],
+    exp:"Nel 1903 Zanardelli lasciò e Giolitti gli subentrò come primo ministro."},
+   {t:"cls", q:"Giolitti non governò sempre in prima persona: nei momenti di crisi lasciava il potere ad altri. Classifica questi presidenti del Consiglio.",
+    cats:["Uomo di fiducia","Avversario"],
+    items:[["Alessandro Fortis (1905–1906)",0],["Sidney Sonnino (1906 e 1909–1910)",1],["Luigi Luzzatti (1910–1911)",0]],
+    exp:"Fortis e Luzzatti erano uomini di fiducia; Sonnino era un avversario. Così Giolitti lasciava agli altri i momenti di crisi e, quando si vedeva che non sapevano gestire il potere, tornava al governo."}
+  ]},
+ {title:"La sala delle macchine", sub:"Il decollo industriale e le caratteristiche dell'economia", letter:"A",
+  intro:"Ruote dentate, cavi elettrici e registri contabili. Le macchine ripartiranno solo se capisci come e perché l'Italia si industrializzò.",
+  qs:[
+   {t:"mc", q:"Tra il 1896 e il 1908, finita la «grande depressione», quale fu il tasso medio annuo di crescita in Italia?",
+    opts:["Circa il 6,5%, il più alto d'Europa","Circa il 2,4%","Circa il 57%","Circa il 12%"], a:0,
+    exp:"Tra il 1896 e il 1908 la crescita fu in media del 6,5% annuo, la più alta d'Europa; tra il 1908 e il 1913 si assestò sul 2,4%."},
+   {t:"in", q:"Le industrie si concentrarono tra Torino, Milano e Genova, nel cosiddetto «___ industriale». Completa con la parola mancante.", acc:["triangolo","triangolo industriale"],
+    exp:"Il triangolo industriale (Torino–Milano–Genova) era la sede della maggior parte delle nuove industrie."},
+   {t:"cls", q:"Associa ogni stabilimento o prodotto al suo settore.",
+    cats:["Siderurgico","Meccanico","Elettrico","Tessile"],
+    items:[["Stabilimenti di Terni e Ilva di Piombino",0],["FIAT, Alfa Romeo, Lancia",1],["Da 100 a 2325 milioni di kWh (1898–1914)",2],["Industria del cotone",3]],
+    exp:"Siderurgia: Terni e Ilva di Piombino. Meccanica: FIAT, Alfa Romeo, Lancia. Elettricità: da 100 milioni di kWh nel 1898 a 2325 milioni nel 1914. Tessile: soprattutto il cotone."},
+   {t:"cls", q:"Vero o falso?",
+    cats:["Vero","Falso"],
+    items:[["L'industria italiana crebbe fin dall'inizio senza alcun aiuto dello Stato",1],
+           ["Le commesse statali (per esempio per i trasporti ferroviari) favorirono i settori meccanico e siderurgico",0],
+           ["Il protezionismo avvantaggiò le esportazioni di olio, vino e agrumi del Mezzogiorno",1],
+           ["Il protezionismo fu introdotto in Italia da Depretis con le tariffe doganali del 1887",0]],
+    exp:"L'industria fu fortemente aiutata dall'intervento statale (commesse, protezionismo). Le alte tasse sui prodotti esteri favorirono le industrie del Nord ma danneggiarono il Mezzogiorno, che si vide chiudere i mercati esteri per olio, vino e agrumi. Il protezionismo risaliva a Depretis (1887)."}
+  ]},
+ {title:"Il caveau della banca", sub:"Le banche miste", letter:"S",
+  intro:"Una porta blindata con l'insegna «Banca Commerciale – Credito Italiano». Dentro, i risparmi degli italiani e i capitali stranieri.",
+  qs:[
+   {t:"mc", q:"Le grandi banche miste nate in questo periodo (Banca Commerciale e Credito Italiano) furono fondate con l'aiuto di capitali esteri, soprattutto…",
+    opts:["tedeschi","francesi","inglesi","statunitensi"], a:0,
+    exp:"Le banche miste furono fondate con l'aiuto di capitali esteri, soprattutto tedeschi; raccoglievano i risparmi dei privati e li reinvestivano nell'industria."},
+   {t:"mc", q:"Perché queste banche si chiamavano «miste»?",
+    opts:["Perché univano la funzione di banca commerciale (depositi e prestiti a breve) e quella di banca d'affari (investimenti industriali a medio-lungo termine)",
+          "Perché erano metà pubbliche e metà private",
+          "Perché avevano sedi sia al Nord sia al Sud",
+          "Perché prestavano denaro sia agli agricoltori sia agli operai"], a:0,
+    exp:"La banca mista superava la distinzione tra banca commerciale e banca d'affari. Il rischio: se falliva un'industria finanziata, la banca poteva fallire con lei, trascinando anche i risparmiatori."},
+   {t:"mc", q:"Qual era il rischio principale di questo modello bancario?",
+    opts:["Fallire insieme alle industrie finanziate, trascinando i risparmiatori","Non riuscire a raccogliere depositi","Dipendere troppo dalle rimesse degli emigranti","Essere nazionalizzata dallo Stato"], a:0,
+    exp:"Proprio perché investiva nelle industrie, la banca mista rischiava di fallire con loro, travolgendo i risparmi dei depositanti."}
+  ]},
+ {title:"Le strade della città", sub:"Luci e ombre dello sviluppo", letter:"R",
+  intro:"Lampioni elettrici e tram da una parte, vicoli sovraffollati dall'altra. Distingui le luci dalle ombre per accendere l'ultimo lampione.",
+  qs:[
+   {t:"cls", q:"Luce o ombra dello sviluppo?",
+    cats:["Luce","Ombra"],
+    items:[["Illuminazione elettrica e trasporti urbani",0],["Acqua corrente e gas in molte case",0],["Quartieri sovraffollati, malsani e degradati",1],["Servizi igienici in comune",1],["Il riscaldamento era un lusso",1],["Miglioramento delle condizioni igieniche e progressi della medicina",0]],
+    exp:"Nelle città arrivarono elettricità, trasporti urbani, servizi pubblici, acqua corrente e gas; ma le classi operaie vivevano in quartieri sovraffollati e malsani, con servizi igienici in comune e il riscaldamento come lusso."},
+   {t:"in", q:"Quale percentuale dei lavoratori dell'industria italiana si concentrava nel triangolo industriale? (scrivi solo il numero)", acc:["57","57%"],
+    exp:"Nel triangolo industriale lavorava più della metà, precisamente il 57%, di tutti i lavoratori dell'industria."},
+   {t:"mc", q:"Grazie ai progressi medici e sanitari la popolazione crebbe. Ma come si spostò?",
+    opts:["In gran parte dalle campagne alle città","Dalle città alle campagne","Dal Nord verso il Sud","Dalla pianura verso le montagne"], a:0,
+    exp:"La popolazione si spostò in gran parte dalle campagne alle città, sedi delle principali industrie."}
+  ]},
+ {title:"La sede del partito", sub:"Il rapporto con i socialisti", letter:"A",
+  intro:"Volantini, bandiere rosse e un registro dei dirigenti. Giolitti cerca un accordo: capisci con chi poteva parlare e con chi no.",
+  qs:[
+   {t:"cls", q:"All'interno del Partito Socialista Italiano c'erano due correnti. Classifica i leader.",
+    cats:["Riformisti","Massimalisti"],
+    items:[["Filippo Turati",0],["Claudio Treves",0],["Leonida Bissolati",0],["Costantino Lazzari",1],["Benito Mussolini",1]],
+    exp:"Riformisti (cambiare la società gradualmente, con le riforme): Turati, Treves, Bissolati. Massimalisti (servono la rivoluzione, niente patti con i governi borghesi): Lazzari e Mussolini."},
+   {t:"mc", q:"Giolitti cercò l'appoggio dei riformisti e invitò Turati a entrare nel governo. Che cosa accadde?",
+    opts:["Turati non accettò","Turati accettò e diventò ministro","Turati accettò ma si dimise dopo pochi mesi","Turati propose Mussolini al suo posto"], a:0,
+    exp:"Turati, esponente socialista e a lungo segretario del partito, rifiutò l'invito di Giolitti."},
+   {t:"ord", q:"Metti in ordine cronologico gli eventi.",
+    items:["Giolitti cerca l'appoggio dei socialisti riformisti","Turati rifiuta di entrare nel governo","Settembre 1904: primo sciopero generale","Giolitti indice nuove elezioni","Gli elettori, spaventati dalla «minaccia rossa», premiano i liberali"],
+    exp:"Dopo il rifiuto di Turati, nel settembre 1904 fu proclamato il primo sciopero generale; Giolitti reagì indicendo nuove elezioni, vinte dai liberali grazie alla paura della «minaccia rossa»."}
+  ]},
+ {title:"Il palazzo del governo", sub:"Successi e limiti della politica giolittiana", letter:"L",
+  intro:"Due ritratti dello stesso uomo appesi uno di fronte all'altro, ma con espressioni diverse. Che cosa significa?",
+  qs:[
+   {t:"in", q:"Il modo di fare politica di Giolitti è stato definito del «doppio ___». Completa.", acc:["volto"],
+    exp:"Si parla del «doppio volto» di Giolitti: una profonda contraddizione nel suo modo di governare."},
+   {t:"cls", q:"Nord o Sud? Assegna ogni aspetto del «doppio volto».",
+    cats:["Nord","Sud"],
+    items:[["Volto aperto e democratico",0],["Neutralità dello Stato nei conflitti sindacali, scioperi consentiti",0],["Volto conservatore e corrotto",1],["Uso dei prefetti per ostacolare gli oppositori",1],["Brogli per far eleggere parlamentari fedeli",1]],
+    exp:"Al Nord Giolitti consentì gli scioperi e lasciò lo Stato neutrale nei conflitti sindacali. Al Sud, considerato un serbatoio di voti, usò prefetti, forze dell'ordine, minacce, corruzione e brogli."},
+   {t:"mc", q:"Quale di queste NON fu realizzata da Giolitti?",
+    opts:["Una riforma tributaria per una maggiore giustizia fiscale","Orario di lavoro massimo di 10 ore","Età minima di 12 anni per il lavoro dei fanciulli","Riorganizzazione della Cassa nazionale per l'invalidità e la vecchiaia"], a:0,
+    exp:"Le riforme sociali ci furono (10 ore, 12 anni, Cassa nazionale, tutela della maternità delle lavoratrici), ma all'azione di Giolitti mancò il largo respiro: per esempio non fu attuata una riforma tributaria più giusta."},
+   {t:"in", q:"In che anno avvenne la statalizzazione delle ferrovie? (scrivi l'anno)", acc:["1905"],
+    exp:"Le ferrovie furono statalizzate nel 1905. Nel 1912 si tentò invece di nazionalizzare le assicurazioni sulla vita con l'INA, ma il provvedimento non fu mai davvero attuato."}
+  ]},
+ {title:"Il porto dell'emigrazione", sub:"Il Sud e la grande emigrazione", letter:"N",
+  intro:"Bauli, biglietti di terza classe e lettere con dentro qualche banconota. Qui partono milioni di italiani.",
+  qs:[
+   {t:"in", q:"Quale storico e politico pugliese definì Giolitti «ministro della malavita»? (cognome)", acc:["salvemini","gaetano salvemini"],
+    exp:"Gaetano Salvemini (1873–1957) criticò duramente i metodi usati da Giolitti nel Sud: il giudizio ha aperto un dibattito storiografico che continua ancora oggi."},
+   {t:"mc", q:"Quale fu uno dei pochi interventi di Giolitti per il Mezzogiorno?",
+    opts:["La costruzione dell'acquedotto pugliese e le leggi speciali dopo i terremoti","La riforma agraria con la divisione dei latifondi","L'abolizione delle tariffe protezionistiche per i prodotti del Sud","La creazione di un triangolo industriale nel Sud"], a:0,
+    exp:"Gli interventi al Sud furono pochi e saltuari: l'acquedotto pugliese e le «leggi speciali» per i terremoti del 1905, 1907 e 1908. Il divario Nord-Sud crebbe."},
+   {t:"mc", q:"Quanti italiani emigrarono tra il 1900 e il 1914?",
+    opts:["Più di 8 milioni","Circa 900.000","Circa 2 milioni","Circa 20 milioni"], a:0,
+    exp:"Tra il 1900 e il 1914 emigrarono più di 8 milioni di italiani, con un picco di quasi 900.000 partenze nel 1913, soprattutto verso il Nord Europa, gli Stati Uniti e l'America del Sud (Argentina, Brasile)."},
+   {t:"in", q:"Come si chiamavano le somme di denaro che gli emigrati spedivano alle famiglie rimaste in patria?", acc:["rimesse","le rimesse","rimessa"],
+    exp:"Le rimesse aiutavano l'economia dei paesi d'origine; inoltre i lavoratori rimasti, meno numerosi, poterono contrattare salari più alti."}
+  ]},
+ {title:"Oltremare e urne", sub:"La Libia, il suffragio, i cattolici", letter:"A",
+  intro:"Una carta del Mediterraneo, una scheda elettorale e una lettera con il sigillo dell'Unione Elettorale Cattolica. È l'ultima stanza.",
+  qs:[
+   {t:"mc", q:"Quale di questi NON fu un motivo della conquista della Libia?",
+    opts:["Sfruttare il petrolio libico, già scoperto","Dimostrare ai nazionalisti che il governo sapeva aumentare il prestigio internazionale dell'Italia","Assecondare i grandi gruppi industriali e finanziari (come il Banco di Roma)","Accontentare l'opinione pubblica, che chiedeva terre per i braccianti del Sud"], a:0,
+    exp:"Il petrolio libico fu scoperto solo nel 1959. I motivi reali erano il prestigio davanti ai nazionalisti, gli interessi economici (il Banco di Roma) e le terre da dare ai braccianti del Sud e agli emigranti."},
+   {t:"in", q:"Con quale trattato del 1912 la Turchia cedette di fatto la Libia all'Italia? Trattato di…", acc:["losanna","trattato di losanna"],
+    exp:"Con il Trattato di Losanna (1912) l'Italia ottenne la Libia e il Dodecaneso (capoluogo Rodi), occupato durante la guerra contro la Turchia."},
+   {t:"in", q:"Salvemini definì la Libia uno «___ di sabbia». Completa.", acc:["scatolone"],
+    exp:"«Scatolone di sabbia»: la Libia non aveva né materie prime né terre fertili; ne trassero vantaggio soprattutto le banche, gli armatori e l'industria militare."},
+   {t:"mc", q:"Con la legge elettorale del 1912 (suffragio universale maschile), chi poteva votare?",
+    opts:["Tutti i maschi a 30 anni; a 21 anni chi aveva fatto il servizio militare o sapeva leggere e scrivere","Tutti i cittadini, uomini e donne, a 21 anni","Solo i maschi alfabetizzati con un certo reddito","Tutti i maschi a 21 anni, senza eccezioni"], a:0,
+    exp:"A 30 anni votavano tutti i maschi; a 21 serviva aver fatto il servizio militare o saper leggere e scrivere. Le donne votarono solo dal 1946."},
+   {t:"in", q:"Nel 1913 Giolitti strinse un accordo con l'Unione Elettorale Cattolica: il Patto… (cognome del conte che la presiedeva)", acc:["gentiloni","patto gentiloni"],
+    exp:"Con il Patto Gentiloni i cattolici votarono i candidati liberali che si impegnavano a difendere la Chiesa (no al divorzio, insegnamento religioso). Il «non expedit» di Pio IX (1874), già ammorbidito da Pio X nel 1904, veniva così superato."}
+  ]}
+];
+const FINAL = {answer:["salandra","antonio salandra"],
+  q:"Nel 1914, dopo la guerra di Libia e la crisi economica, Giolitti si dimise e indicò come successore un uomo politico conservatore, che poi non seguì la sua linea e fece reprimere con l'esercito la «settimana rossa». Ricomponi il suo cognome con le lettere che hai raccolto.",
+  exp:"Antonio Salandra. La crisi di inizio 1914, la «settimana rossa» in Romagna e nelle Marche e poi la Prima guerra mondiale chiusero l'età giolittiana."};
+
+/* ============ STATO ============ */
+const PEN = 15;
+let S = {};
+const $ = s => document.querySelector(s);
+const main = $("#main");
+const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9%]/g," ").replace(/\s+/g," ").trim();
+const shuffle = a => {a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc = s => s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const totalQ = ROOMS.reduce((n,r)=>n+r.qs.length,0);
+
+function start(){
+  main.innerHTML = `
+   <div class="kicker">Escape room di storia · Parte 1, Unità 2</div>
+   <h1>L'età giolittiana<br>1901–1914</h1>
+   <div class="orn">❦ ❦ ❦</div>
+   <p>Siete rimasti chiusi nel palazzo del governo. Per uscire dovete attraversare <b>${ROOMS.length} stanze</b>: in ognuna ci sono domande sul capitolo del manuale dedicato a Giolitti.</p>
+   <p>Ogni stanza superata vi dà <b>una lettera</b>. Alla fine, con le lettere raccolte, aprirete l'ultima porta.</p>
+   <p class="small">Risposta giusta al primo tentativo: 10 punti · al secondo: 5 punti. Ogni errore toglie ${PEN} secondi. Dopo due errori la soluzione viene mostrata e si va avanti: nessuno resta bloccato.</p>
+   <div class="row" style="margin:16px 0 4px">
+     <label for="team">Nome della squadra:</label>
+     <input type="text" id="team" placeholder="es. I Riformisti" style="max-width:260px">
+   </div>
+   <div class="row" style="margin:10px 0 18px">
+     <label for="min">Tempo a disposizione:</label>
+     <select id="min"><option>20</option><option selected>25</option><option>30</option><option>35</option></select> minuti
+   </div>
+   <div class="row right"><button id="go">Entra nel palazzo →</button></div>`;
+  $("#go").onclick = () => {
+    S = {team:$("#team").value.trim()||"Squadra senza nome", room:0, q:0, tries:0, score:0,
+         time:+$("#min").value*60, log:[], letters:[], over:false};
+    $("#hud").hidden = false; drawDoors(); tick(); S.int = setInterval(tick,1000);
+    roomIntro();
+  };
+}
+
+function tick(){
+  if(S.over) return;
+  if(S.started) S.time--; S.started = true;
+  if(S.time<=0){S.time=0; renderTime(); return finish(false);}
+  renderTime();
+}
+function renderTime(){
+  const m=Math.floor(S.time/60), s=S.time%60, el=$("#timer");
+  el.textContent = `${m}:${String(s).padStart(2,"0")}`;
+  el.className = "timer"+(S.time<=60?" crit":S.time<=180?" warn":"");
+}
+function penalty(){
+  S.time = Math.max(0,S.time-PEN); renderTime();
+  const p=$("#pen"); p.classList.add("show"); setTimeout(()=>p.classList.remove("show"),1100);
+  if(S.time<=0) finish(false);
+}
+function drawDoors(){
+  $("#doors").innerHTML = ROOMS.map((r,i)=>`<div class="door ${i<S.room?"open":""} ${i===S.room&&!S.over?"here":""}" title="${esc(r.title)}">${i<S.room?r.letter:i+1}</div>`).join("");
+  $("#score").textContent = `Punti: ${S.score}`;
+}
+
+function roomIntro(){
+  const r = ROOMS[S.room]; drawDoors();
+  main.innerHTML = `
+   <div class="kicker">Stanza ${S.room+1} di ${ROOMS.length}</div>
+   <h2>${r.title}</h2>
+   <p class="small"><i>${r.sub}</i></p>
+   <div class="orn">❦</div>
+   <p>${r.intro}</p>
+   <p class="small">${r.qs.length} domande per aprire la porta.</p>
+   <div class="row right actions"><button id="go">Comincia →</button></div>`;
+  $("#go").onclick = () => {S.q=0; showQ();};
+}
+
+function showQ(){
+  if(S.over) return;
+  const r = ROOMS[S.room], q = r.qs[S.q]; S.tries = 0; S.done=false;
+  main.innerHTML = `
+   <div class="qmeta"><span>${r.title}</span><span>Domanda ${S.q+1}/${r.qs.length}</span></div>
+   <div class="qtext">${esc(q.q)}</div>
+   <div id="body"></div>
+   <div id="fb"></div>
+   <div class="row right actions" id="act"></div>`;
+  const body = $("#body"), act = $("#act");
+  if(q.t==="mc"){
+    q._o = shuffle(q.opts.map((t,i)=>({t,ok:i===q.a})));
+    body.innerHTML = `<div class="opts">${q._o.map((o,i)=>`<button class="opt" data-i="${i}">${esc(o.t)}</button>`).join("")}</div>`;
+    body.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+      if(S.done) return; const o=q._o[+b.dataset.i];
+      if(o.ok){b.classList.add("right"); right();}
+      else{b.classList.add("wrong"); b.disabled=true; wrong("Quella non è giusta: l'opzione è stata eliminata. Riprova.");}
+    });
+  }
+  if(q.t==="in"){
+    body.innerHTML = `<input type="text" id="ans" autocomplete="off" placeholder="Scrivi qui la risposta">`;
+    act.innerHTML = `<button id="chk">Verifica</button>`;
+    const go=()=>{ if(S.done) return; const v=norm($("#ans").value); if(!v) return;
+      if(q.acc.some(a=>norm(a)===v)) right();
+      else { const a=q.acc[0]; wrong(`Non ancora. Indizio: la risposta comincia con «${a[0].toUpperCase()}» ed è lunga ${a.length} caratteri.`); $("#ans").select(); } };
+    $("#chk").onclick=go; $("#ans").onkeydown=e=>{if(e.key==="Enter")go()}; $("#ans").focus();
+  }
+  if(q.t==="cls"){
+    q._items = shuffle(q.items.map(([t,c])=>({t,c,sel:null})));
+    body.innerHTML = `<div class="cls">${q._items.map((it,i)=>`
+      <div class="clsrow" id="cr${i}"><span>${esc(it.t)}</span>
+      <div class="seg">${q.cats.map((c,j)=>`<button data-i="${i}" data-j="${j}">${esc(c)}</button>`).join("")}</div></div>`).join("")}</div>`;
+    body.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{
+      if(S.done) return; const i=+b.dataset.i, j=+b.dataset.j; q._items[i].sel=j;
+      b.parentNode.querySelectorAll("button").forEach(x=>x.classList.toggle("sel",x===b));
+      $("#cr"+i).classList.remove("wrong");
+    });
+    act.innerHTML = `<button id="chk">Verifica</button>`;
+    $("#chk").onclick=()=>{
+      if(S.done) return;
+      if(q._items.some(it=>it.sel===null)){ fb("Assegna una categoria a ogni voce prima di verificare.","");return;}
+      let bad=0; q._items.forEach((it,i)=>{const ok=it.sel===it.c; $("#cr"+i).classList.toggle("right",ok); $("#cr"+i).classList.toggle("wrong",!ok); if(!ok)bad++;});
+      if(!bad) right(); else wrong(`${bad} ${bad===1?"voce è sbagliata":"voci sono sbagliate"} (in rosso). Correggi e riprova.`);
+    };
+  }
+  if(q.t==="ord"){
+    let cur = shuffle(q.items.map((t,i)=>({t,i})));
+    while(q.items.length>1 && cur.every((x,k)=>x.i===k)) cur=shuffle(cur);
+    q._cur = cur;
+    const draw=()=>{ body.innerHTML = `<div class="ord">${q._cur.map((x,k)=>`
+      <div class="orow" id="or${k}"><span class="n">${k+1}</span><span class="t">${esc(x.t)}</span>
+      <button data-k="${k}" data-d="-1" ${k===0?"disabled":""} aria-label="Su">▲</button>
+      <button data-k="${k}" data-d="1" ${k===q._cur.length-1?"disabled":""} aria-label="Giù">▼</button></div>`).join("")}</div>`;
+      body.querySelectorAll(".orow button").forEach(b=>b.onclick=()=>{ if(S.done)return; const k=+b.dataset.k,d=+b.dataset.d;
+        [q._cur[k],q._cur[k+d]]=[q._cur[k+d],q._cur[k]]; draw(); }); };
+    draw(); q._draw=draw;
+    act.innerHTML = `<button id="chk">Verifica</button>`;
+    $("#chk").onclick=()=>{
+      if(S.done) return; let bad=0;
+      q._cur.forEach((x,k)=>{const ok=x.i===k; $("#or"+k).classList.toggle("right",ok); $("#or"+k).classList.toggle("wrong",!ok); if(!ok)bad++;});
+      if(!bad) right(); else wrong(`${bad} eventi non sono al posto giusto (in rosso). Spostali e riprova.`);
+    };
+  }
+}
+
+function fb(html,cls){ $("#fb").innerHTML = `<div class="fb ${cls}">${html}</div>`; }
+function answerText(q){
+  if(q.t==="mc") return q.opts[q.a];
+  if(q.t==="in") return q.acc[0][0].toUpperCase()+q.acc[0].slice(1);
+  if(q.t==="cls") return q.items.map(([t,c])=>`${t} → ${q.cats[c]}`).join("; ");
+  if(q.t==="ord") return q.items.map((t,i)=>`${i+1}. ${t}`).join(" ");
+}
+function right(){
+  const pts = S.tries===0?10:5; S.score+=pts; S.done=true; drawDoors();
+  log(pts);
+  fb(`<b>Esatto! +${pts} punti.</b><br>${esc(cur().exp)}`,"ok"); next();
+}
+function wrong(msg){
+  S.tries++; penalty(); if(S.over) return;
+  if(S.tries>=2){
+    S.done=true; log(0); const q=cur();
+    if(q.t==="mc") document.querySelectorAll(".opt").forEach(b=>{ if(q._o[+b.dataset.i].ok) b.classList.add("right"); });
+    if(q.t==="cls") q._items.forEach((it,i)=>{ const row=$("#cr"+i); row.querySelectorAll("button").forEach((x,j)=>x.classList.toggle("sel",j===it.c)); row.classList.remove("wrong"); row.classList.add("right"); });
+    if(q.t==="ord"){ q._cur = q.items.map((t,i)=>({t,i})); q._draw(); document.querySelectorAll(".orow").forEach(r=>r.classList.add("right")); }
+    if(q.t==="in"){ $("#ans").value = answerText(q); $("#ans").disabled=true; }
+    fb(`<b>Ecco la soluzione.</b> ${esc(answerText(q))}<br>${esc(q.exp)}`,"bad"); next();
+  } else fb(msg,"bad");
+}
+const cur = () => ROOMS[S.room].qs[S.q];
+function log(pts){ S.log.push({r:S.room,q:S.q,pts}); }
+function next(){
+  const act=$("#act"); const last = S.q===ROOMS[S.room].qs.length-1;
+  act.innerHTML = `<button id="nx">${last?"Apri la porta →":"Avanti →"}</button>`;
+  $("#nx").onclick = () => { if(last) roomDone(); else {S.q++; showQ();} };
+  $("#nx").focus();
+}
+function roomDone(){
+  const r = ROOMS[S.room]; S.letters.push(r.letter); S.room++; drawDoors();
+  main.innerHTML = `
+   <div class="center">
+    <div class="kicker">Porta aperta</div>
+    <h2>${r.title}: superata!</h2>
+    <p>Dietro la porta trovate una lettera incisa nel legno:</p>
+    <div class="bigletter">${r.letter}</div>
+    <p class="small">Lettere raccolte: <b>${S.letters.join(" · ")}</b></p>
+   </div>
+   <div class="row right actions"><button id="go">${S.room<ROOMS.length?"Prossima stanza →":"Verso l'ultima porta →"}</button></div>`;
+  $("#go").onclick = () => S.room<ROOMS.length ? roomIntro() : finalLock();
+}
+function finalLock(){
+  S.ftries=0;
+  main.innerHTML = `
+   <div class="kicker">L'ultima porta</div>
+   <h2>Il lucchetto finale</h2>
+   <div class="tiles">${S.letters.map(l=>`<div class="tile">${l}</div>`).join("")}</div>
+   <p class="qtext">${esc(FINAL.q)}</p>
+   <input type="text" id="ans" autocomplete="off" placeholder="Cognome">
+   <div id="fb"></div>
+   <div class="row right actions" id="act"><button id="chk">Apri</button></div>`;
+  const go=()=>{ const v=norm($("#ans").value); if(!v) return;
+    if(FINAL.answer.some(a=>norm(a)===v)){ S.score+=20; finish(true); }
+    else { S.ftries++; penalty(); if(S.over) return;
+      fb(S.ftries>=2?"Indizio: l'ultima pagina del capitolo, «1914: finisce l'età giolittiana». Il nome di battesimo è Antonio.":"Il lucchetto non si apre. Prova un altro ordine delle lettere.","bad"); } };
+  $("#chk").onclick=go; $("#ans").onkeydown=e=>{if(e.key==="Enter")go()}; $("#ans").focus();
+}
+
+function finish(won){
+  if(S.over) return; S.over=true; clearInterval(S.int); drawDoors();
+  const max = totalQ*10+20;
+  const m=Math.floor(S.time/60), s=S.time%60;
+  const byRoom = ROOMS.map((r,ri)=>{
+    const qs = r.qs.map((q,qi)=>{ const l=S.log.find(x=>x.r===ri&&x.q===qi);
+      const tag = !l?`<span class="tag t0">non svolta</span>`:`<span class="tag t${l.pts}">${l.pts} pt</span>`;
+      return `<div class="rq">${esc(q.q)} ${tag}<br><span class="a">${esc(answerText(q))}</span><br><span class="small">${esc(q.exp)}</span></div>`; }).join("");
+    return `<details><summary>Stanza ${ri+1}: ${r.title}</summary>${qs}</details>`; }).join("");
+  main.innerHTML = `
+   <div class="center">
+    <div class="kicker">${esc(S.team)}</div>
+    <h1>${won?"Siete usciti!":"Tempo scaduto"}</h1>
+    ${won?`<p>Avete aperto l'ultima porta con <b>${m}:${String(s).padStart(2,"0")}</b> ancora sul timer.</p><div class="bigletter" style="width:auto;padding:0 20px;font-size:2.4rem">SALANDRA</div><p class="small">${esc(FINAL.exp)}</p>`
+         :`<p>Siete arrivati alla stanza ${Math.min(S.room+1,ROOMS.length)} di ${ROOMS.length}. Non importa: qui sotto trovate tutte le soluzioni per ripassare.</p>`}
+    <h2 style="margin-top:14px">${S.score} / ${max} punti</h2>
+    <p class="small">Domande svolte: ${S.log.length} su ${totalQ} · al primo colpo: ${S.log.filter(x=>x.pts===10).length}</p>
+   </div>
+   <div class="review"><h3>Ripasso: tutte le risposte</h3>${byRoom}</div>
+   <div class="row right actions"><button class="ghost" id="again">Ricomincia</button></div>`;
+  $("#again").onclick = () => { $("#hud").hidden=true; start(); };
+}
+start();
+</script>
+</body>
+</html>
